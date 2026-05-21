@@ -849,7 +849,50 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('.section').forEach(s => observer.observe(s));
 
 // === Submit ===
+function collectAnswers() {
+  let lines = [];
+  // الـ 53 سؤال
+  const q53 = ["أشعر بالراحة","أشعر بالغضب أو الحزن","أشعر أن هناك الكثير من المطالب المفروضة عليّ","أشعر أنني وحيد أو معزول","لدي العديد من المهام التي يجب إنجازها","أفعل دائماً الأشياء التي أحبها","أشعر بالتعب والإجهاد","أشعر بالهدوء","أشعر أنني مليء بالطاقة","أشعر أنني في مواقف نزاع","أخشى ألا أستطيع تحقيق أهدافي","لدي العديد من القرارات التي يجب اتخاذها","أشعر بالإحباط","أشعر أن مشاكلي تتفاقم","لدي الكثير من القلق","أشعر بالأمان والحماية","أشعر أنني في عجلة من أمري","أشعر بالتوتر والضغط بدون سبب واضح","أشعر بالانتقاد أو الحكم عليّ","أشعر بالإجهاد العقلي","لدي وقت كافٍ لنفسي","أشعر بالخوف من المستقبل","أستمتع بصحبة نفسي","أشعر بالضغط بسبب المواعيد النهائية","أشعر بأنني مُحمل بالمسؤوليات","يمكنني وصف نفسي بأنني خفيف الظل","لا أنام بشكل كافٍ","أجد صعوبة في التعايش مع الآخرين","أجد صعوبة في التركيز","لا أستطيع الاستمتاع بالحياة","من الصعب اتخاذ قرارات صغيرة","أعاني من أعراض جسدية","واجهت تغييرات كبيرة في حياتي مؤخراً","لا أجد ساعات كافية في اليوم","أنكر أو أتجاهل المشكلات","أقوم بالمهام بنفسي لضمان إنجازها","أشعر أن ثقتي بنفسي أقل مما أرغب","أشعر بالذنب كثيراً إذا استرخيت","أجد نفسي أفكر في المشكلات وقت الراحة","أشعر بالتعب بعد نوم كافٍ","أومئ برأسي أو أكمل جمل الآخرين","لدي ميل إلى الأكل أو المشي بسرعة","تغيرت شهيتي","أشعر بالانزعاج من السيارة البطيئة","أشعر بالإحباط عند الانتظار في طابور","إذا أزعجني شيء أكتم مشاعري","أسعى للفوز في الألعاب بأي ثمن","أعاني من تقلبات المزاج","أبحث عن الأخطاء وأنتقد الآخرين","أجد نفسي أطحن أسناني","لدي آلام عضلات في الرقبة والظهر","لا أستطيع أداء المهام كما اعتدت","لا أجد الوقت للهوايات خارج العمل"];
+  lines.push('=== مقياس الضغط العام ===');
+  q53.forEach((q, i) => {
+    const ans = document.querySelector(`input[name="q${i+1}"]:checked`);
+    lines.push(`${i+1}. ${q}: ${ans ? ans.value : 'لم يُجب'}`);
+  });
+  // المحاور
+  const axes = {personal:'الجانب الشخصي',health:'الجانب الصحي',family:'الجانب الأسري',social:'الجانب الاجتماعي',work:'الجانب المهني',finance:'الجانب المالي',fun:'الجانب الترفيهي'};
+  lines.push('\n=== مصادر الضغط في محاور الحياة ===');
+  Object.entries(axes).forEach(([name, label]) => {
+    const checked = [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el => el.closest('.check-item').querySelector('.check-label').textContent);
+    lines.push(`${label}: ${checked.length ? checked.join(' | ') : 'لا شيء'}`);
+  });
+  // المهني والروحاني
+  lines.push('\n=== تقييم الجانب المهني ===');
+  ['p1','p2','p3','p4','p5','p6','p7','p8'].forEach(n => {
+    const ans = document.querySelector(`input[name="${n}"]:checked`);
+    const q = document.querySelector(`.yn-row[data-yn="${n}"] .yn-question`);
+    lines.push(`${q ? q.textContent : n}: ${ans ? ans.value : 'لم يُجب'}`);
+  });
+  lines.push('\n=== تقييم الجانب الروحاني ===');
+  ['r1','r2','r3','r4'].forEach(n => {
+    const ans = document.querySelector(`input[name="${n}"]:checked`);
+    const q = document.querySelector(`.yn-row[data-yn="${n}"] .yn-question`);
+    lines.push(`${q ? q.textContent : n}: ${ans ? ans.value : 'لم يُجب'}`);
+  });
+  return lines.join('\n');
+}
+
 function submitForm() {
+  const answers = collectAnswers();
+  // إرسال عبر Web3Forms
+  const formData = new FormData();
+  formData.append('access_key', 'b8e3c2d4-5f6a-4b7c-8d9e-0f1a2b3c4d5e');
+  formData.append('subject', 'استبيان عجلة الحياة - إجابات جديدة');
+  formData.append('from_name', 'استبيان عمرو عز');
+  formData.append('email', 'umrezz1@gmail.com');
+  formData.append('message', answers);
+  fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
+    .catch(() => {});
+  // إظهار شاشة الشكر فوراً
   document.getElementById('surveyForm').style.display = 'none';
   document.getElementById('thank-you').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
