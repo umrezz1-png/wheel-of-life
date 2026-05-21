@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استبيان عجلة الحياة | د. عمرو عز</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy2: #1a2d42;
+    --blue: #1e4d8c;
+    --accent: #c8a96e;
+    --accent2: #e8c97e;
+    --light: #f5f0e8;
+    --white: #ffffff;
+    --gray: #8a9ab0;
+    --red: #c0392b;
+    --green: #1a6b4a;
+    --border: rgba(200,169,110,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--navy);
+    color: var(--light);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy2) 60%, #0a2240 100%);
+    padding: 60px 24px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(200,169,110,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(30,77,140,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(200,169,110,0.12);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 6px 18px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    font-size: 15px;
+    color: var(--gray);
+    max-width: 540px;
+    margin: 0 auto 28px;
+    line-height: 1.8;
+    font-family: 'Tajawal', sans-serif;
+  }
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .hero-meta span {
+    font-size: 12px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-meta span::before {
+    content: '◆';
+    font-size: 8px;
+  }
+
+  /* ===== PROGRESS ===== */
+  .progress-bar-wrap {
+    background: var(--navy2);
+    padding: 16px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .progress-label { font-size: 12px; color: var(--gray); white-space: nowrap; }
+  .progress-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--accent));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-pct { font-size: 12px; color: var(--accent); font-weight: 600; min-width: 32px; }
+
+  /* ===== CONTAINER ===== */
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  /* ===== SECTION ===== */
+  .section {
+    margin-bottom: 40px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .section.visible { opacity: 1; transform: translateY(0); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 36px; height: 36px;
+    background: var(--blue);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .section-sub {
+    font-size: 12px;
+    color: var(--gray);
+    font-family: 'Tajawal', sans-serif;
+    margin-top: 2px;
+  }
+
+  /* ===== TABLE GRID (53 Questions) ===== */
+  .q-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  .q-table thead th {
+    background: var(--navy2);
+    color: var(--gray);
+    padding: 10px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 52px;
+    z-index: 5;
+  }
+  .q-table thead th:first-child { text-align: right; padding-right: 12px; }
+  .q-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+  .q-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .q-table tbody tr.answered { background: rgba(30,77,140,0.08); }
+  .q-table td { padding: 10px 8px; vertical-align: middle; }
+  .q-table td:first-child {
+    padding-right: 12px;
+    color: var(--light);
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: 'Tajawal', sans-serif;
+  }
+  .q-num {
+    display: inline-block;
+    width: 20px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .q-text { display: flex; gap: 8px; align-items: flex-start; }
+
+  /* Radio custom */
+  .radio-cell { text-align: center; }
+  .radio-cell input[type=radio] { display: none; }
+  .radio-cell label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0;
+  }
+  .radio-cell input[type=radio]:checked + label {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,169,110,0.2);
+  }
+  .radio-cell label:hover { border-color: var(--accent); background: rgba(200,169,110,0.1); }
+
+  /* ===== AXIS QUESTIONS (checkboxes) ===== */
+  .axis-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .axis-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .axis-title .axis-icon {
+    width: 26px; height: 26px;
+    background: rgba(200,169,110,0.12);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  @media(max-width: 480px) { .check-grid { grid-template-columns: 1fr; } }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .check-item input[type=checkbox] { display: none; }
+  .check-box {
+    width: 18px; height: 18px;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-size: 10px;
+  }
+  .check-item input:checked ~ .check-box {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--navy);
+    font-weight: 900;
+  }
+  .check-item input:checked ~ .check-box::after { content: '✓'; }
+  .check-label {
+    font-size: 12px;
+    color: #b0c0d4;
+    line-height: 1.5;
+    font-family: 'Tajawal', sans-serif;
+    transition: color 0.2s;
+  }
+  .check-item input:checked ~ .check-label { color: var(--light); }
+
+  /* ===== YES/NO QUESTIONS ===== */
+  .yn-grid { display: flex; flex-direction: column; gap: 10px; }
+  .yn-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+  .yn-row.answered { border-color: rgba(200,169,110,0.3); }
+  .yn-question {
+    font-size: 13px;
+    color: #b0c0d4;
+    font-family: 'Tajawal', sans-serif;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .yn-options { display: flex; gap: 6px; flex-shrink: 0; }
+  .yn-options input[type=radio] { display: none; }
+  .yn-options label {
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--gray);
+    white-space: nowrap;
+  }
+  .yn-options input:checked + label {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--navy);
+  }
+  .yn-options label:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ===== SUBMIT ===== */
+  .submit-wrap {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+  .submit-btn {
+    background: linear-gradient(135deg, var(--blue), #2563b0);
+    color: var(--white);
+    border: none;
+    padding: 16px 48px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(30,77,140,0.4);
+    letter-spacing: 0.5px;
+  }
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(30,77,140,0.5);
+    background: linear-gradient(135deg, #2563b0, var(--blue));
+  }
+  .submit-note {
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 12px;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  /* ===== THANK YOU ===== */
+  #thank-you {
+    display: none;
+    text-align: center;
+    padding: 80px 24px;
+    animation: fadeIn 0.6s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  #thank-you .ty-icon { font-size: 56px; margin-bottom: 20px; }
+  #thank-you h2 { font-size: 28px; font-weight: 900; color: var(--white); margin-bottom: 10px; }
+  #thank-you p { font-size: 14px; color: var(--gray); font-family: 'Tajawal', sans-serif; line-height: 1.8; max-width: 420px; margin: 0 auto 24px; }
+  .contact-badges { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .contact-badge {
+    background: rgba(200,169,110,0.1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: rgba(138,154,176,0.5);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  /* ===== SCROLL REVEAL ===== */
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(30px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="logo-badge">د. عمرو عز | كتاب إدارة الضغوط</div>
+  <h1>استبيان <span>عجلة الحياة</span></h1>
+  <p>أجب بصدق عن كل سؤال — إجاباتك ستساعد في رسم خريطة واضحة لمصادر الضغط في حياتك ووضع خطة عملية للتعامل معها</p>
+  <div class="hero-meta">
+    <span>٥ أقسام</span>
+    <span>أسئلة متنوعة</span>
+    <span>نتائج فورية</span>
+    <span>سري تماماً</span>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-bar-wrap">
+  <div class="progress-inner">
+    <span class="progress-label">التقدم</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-pct" id="progressPct">0%</span>
+  </div>
+</div>
+
+<!-- FORM -->
+<div class="container">
+<form id="surveyForm">
+
+<!-- ==============================
+     SECTION 1: مقياس الضغط العام
+     ============================== -->
+<div class="section" id="sec1">
+  <div class="section-header">
+    <div class="section-num">١</div>
+    <div>
+      <div class="section-title">مقياس الضغط العام</div>
+      <div class="section-sub">اختر الإجابة الأقرب لحالتك خلال الأسابيع الأخيرة</div>
+    </div>
+  </div>
+
+  <table class="q-table">
+    <thead>
+      <tr>
+        <th style="width:52%">السؤال</th>
+        <th>بالكاد</th>
+        <th>بعض<br>الوقت</th>
+        <th>عادةً</th>
+        <th>دائماً</th>
+      </tr>
+    </thead>
+    <tbody id="q53body"></tbody>
+  </table>
+</div>
+
+<!-- ==============================
+     SECTION 2: محاور عجلة الحياة
+     ============================== -->
+<div class="section" id="sec2">
+  <div class="section-header">
+    <div class="section-num">٢</div>
+    <div>
+      <div class="section-title">مصادر الضغط في محاور حياتك</div>
+      <div class="section-sub">ضع علامة على كل ما ينطبق عليك في كل محور</div>
+    </div>
+  </div>
+
+  <!-- الجانب الشخصي -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">🧠</span> الجانب الشخصي</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">التعرض للإساءة والأذى</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">أشعر بمشاعر سلبية (حزن / عصبية / غضب)</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">الأعمال المنزلية اليومية</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">أشعر بمشاعر سلبية تجاه نفسي</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">تنظيم فعاليات وأحداث (أعياد / عطلات)</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">التميز والحفاظ على أن أكون ذو أثر</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">عدم قبولي الرفض من الآخرين</span></label>
+      <label class="check-item"><input type="checkbox" name="personal"><span class="check-box"></span><span class="check-label">أشعر بعدم تقدير الآخرين لي</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب الصحي -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">🏥</span> الجانب الصحي</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="health"><span class="check-box"></span><span class="check-label">المرض والإصابة</span></label>
+      <label class="check-item"><input type="checkbox" name="health"><span class="check-box"></span><span class="check-label">الحمل والولادة</span></label>
+      <label class="check-item"><input type="checkbox" name="health"><span class="check-box"></span><span class="check-label">العقم ومشاكل الإنجاب</span></label>
+      <label class="check-item"><input type="checkbox" name="health"><span class="check-box"></span><span class="check-label">لا أستطيع تناول الطعام بشكل جيد</span></label>
+      <label class="check-item"><input type="checkbox" name="health"><span class="check-box"></span><span class="check-label">أشعر بآلام مستمرة</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب الأسري -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">🏠</span> الجانب الأسري</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">مشاكل في العلاقات مع الأسرة</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">الزواج</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">مشاكل مع الوالدين</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">الانفصال أو الطلاق أو الترمل</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">مشاكل مع الإخوة</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">كوني ولي أمر أو مقدم رعاية</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">مشاكل في العلاقات مع الأبناء</span></label>
+      <label class="check-item"><input type="checkbox" name="family"><span class="check-box"></span><span class="check-label">رفض المشاركة في تجمعات أسرية</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب الاجتماعي -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">👥</span> الجانب الاجتماعي</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">مشاكل في العلاقات مع الأصدقاء</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">مشاكل مع الجيران</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">التعرض للتنمر أو العنصرية</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">التعرض للعنف</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">رفض المشاركة في تجمعات (أفراح / مآتم)</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">متابعة أخبار الحرب ومشاهد العنف</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">استخدام وسائل النقل يومياً</span></label>
+      <label class="check-item"><input type="checkbox" name="social"><span class="check-box"></span><span class="check-label">أشعر بالخجل مع أشخاص جدد</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب المهني -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">💼</span> الجانب المهني والدراسة</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">التوتر في أوقات الامتحانات</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">التوتر عند اقتراب مواعيد التسليم</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">مواقف صعبة في العمل / الدراسة</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">صعوبة التعامل مع الزملاء</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">طول فترة البحث عن عمل</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">بداية عمل جديد</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">لا أشعر بقيمتي في العمل</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">أذهب للعمل بضيق / صعوبة بدء اليوم</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">لا أنتمي لعملي ولا لزملائي</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">صعوبة التركيز في العمل</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">خيبة أمل تجاه وظيفتي</span></label>
+      <label class="check-item"><input type="checkbox" name="work"><span class="check-box"></span><span class="check-label">أشك في قدراتي ومهاراتي</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب المالي -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">💰</span> الجانب المالي</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="finance"><span class="check-box"></span><span class="check-label">دخلي غير كافٍ للمعيشة</span></label>
+      <label class="check-item"><input type="checkbox" name="finance"><span class="check-box"></span><span class="check-label">ارتفاع الأسعار (البنزين / السلع)</span></label>
+      <label class="check-item"><input type="checkbox" name="finance"><span class="check-box"></span><span class="check-label">أعاني من الفقر</span></label>
+      <label class="check-item"><input type="checkbox" name="finance"><span class="check-box"></span><span class="check-label">لدي ديون</span></label>
+    </div>
+  </div>
+
+  <!-- الجانب الترفيهي -->
+  <div class="axis-block">
+    <div class="axis-title"><span class="axis-icon">🎯</span> الجانب الترفيهي</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" name="fun"><span class="check-box"></span><span class="check-label">أشعر بالملل عند قضاء وقت الراحة</span></label>
+      <label class="check-item"><input type="checkbox" name="fun"><span class="check-box"></span><span class="check-label">أفقد الرغبة في السفر وتغيير الجو</span></label>
+      <label class="check-item"><input type="checkbox" name="fun"><span class="check-box"></span><span class="check-label">أفقد الرغبة في ممارسة الرياضة</span></label>
+      <label class="check-item"><input type="checkbox" name="fun"><span class="check-box"></span><span class="check-label">أفقد الرغبة في الأنشطة الخارجية</span></label>
+    </div>
+  </div>
+</div>
+
+<!-- ==============================
+     SECTION 3: الجانب المهني التقييمي
+     ============================== -->
+<div class="section" id="sec3">
+  <div class="section-header">
+    <div class="section-num">٣</div>
+    <div>
+      <div class="section-title">تقييم الجانب المهني</div>
+      <div class="section-sub">أجب بصدق عن وضعك المهني الحالي</div>
+    </div>
+  </div>
+  <div class="yn-grid">
+    <div class="yn-row" data-yn="p1">
+      <div class="yn-question">هل تحب مجال عملك؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p1" id="p1y" value="نعم"><label for="p1y">نعم</label>
+        <input type="radio" name="p1" id="p1n" value="لا"><label for="p1n">لا</label>
+        <input type="radio" name="p1" id="p1s" value="أحياناً"><label for="p1s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p2">
+      <div class="yn-question">هل تسعى لتطوير نفسك مهنياً باستمرار؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p2" id="p2y" value="نعم"><label for="p2y">نعم</label>
+        <input type="radio" name="p2" id="p2n" value="لا"><label for="p2n">لا</label>
+        <input type="radio" name="p2" id="p2s" value="أحياناً"><label for="p2s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p3">
+      <div class="yn-question">هل علاقتك جيدة مع زملائك في العمل؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p3" id="p3y" value="نعم"><label for="p3y">نعم</label>
+        <input type="radio" name="p3" id="p3n" value="لا"><label for="p3n">لا</label>
+        <input type="radio" name="p3" id="p3s" value="أحياناً"><label for="p3s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p4">
+      <div class="yn-question">هل تشعر بالراحة النفسية عند دخول مكان عملك؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p4" id="p4y" value="نعم"><label for="p4y">نعم</label>
+        <input type="radio" name="p4" id="p4n" value="لا"><label for="p4n">لا</label>
+        <input type="radio" name="p4" id="p4s" value="أحياناً"><label for="p4s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p5">
+      <div class="yn-question">هل تشارك بفاعلية ولا تكون مجرد آلة تنفذ الأوامر؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p5" id="p5y" value="نعم"><label for="p5y">نعم</label>
+        <input type="radio" name="p5" id="p5n" value="لا"><label for="p5n">لا</label>
+        <input type="radio" name="p5" id="p5s" value="أحياناً"><label for="p5s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p6">
+      <div class="yn-question">هل تقدم أفكاراً جديدة ومبتكرة في عملك؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p6" id="p6y" value="نعم"><label for="p6y">نعم</label>
+        <input type="radio" name="p6" id="p6n" value="لا"><label for="p6n">لا</label>
+        <input type="radio" name="p6" id="p6s" value="أحياناً"><label for="p6s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p7">
+      <div class="yn-question">هل تؤثر مشاكلك الشخصية على كفاءتك في العمل؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p7" id="p7y" value="نعم"><label for="p7y">نعم</label>
+        <input type="radio" name="p7" id="p7n" value="لا"><label for="p7n">لا</label>
+        <input type="radio" name="p7" id="p7s" value="أحياناً"><label for="p7s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="p8">
+      <div class="yn-question">هل تسعى للحصول على ترقيات ومزايا للموظفين النشطين؟</div>
+      <div class="yn-options">
+        <input type="radio" name="p8" id="p8y" value="نعم"><label for="p8y">نعم</label>
+        <input type="radio" name="p8" id="p8n" value="لا"><label for="p8n">لا</label>
+        <input type="radio" name="p8" id="p8s" value="أحياناً"><label for="p8s">أحياناً</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==============================
+     SECTION 4: الجانب الروحاني
+     ============================== -->
+<div class="section" id="sec4">
+  <div class="section-header">
+    <div class="section-num">٤</div>
+    <div>
+      <div class="section-title">تقييم الجانب الروحاني</div>
+      <div class="section-sub">علاقتك بخالقك هي أساس التوازن الداخلي</div>
+    </div>
+  </div>
+  <div class="yn-grid">
+    <div class="yn-row" data-yn="r1">
+      <div class="yn-question">هل أنت راضٍ عن علاقتك بربك؟</div>
+      <div class="yn-options">
+        <input type="radio" name="r1" id="r1y" value="نعم"><label for="r1y">نعم</label>
+        <input type="radio" name="r1" id="r1n" value="لا"><label for="r1n">لا</label>
+        <input type="radio" name="r1" id="r1s" value="أحياناً"><label for="r1s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="r2">
+      <div class="yn-question">هل تؤدي الصلاة في وقتها؟</div>
+      <div class="yn-options">
+        <input type="radio" name="r2" id="r2y" value="نعم"><label for="r2y">نعم</label>
+        <input type="radio" name="r2" id="r2n" value="لا"><label for="r2n">لا</label>
+        <input type="radio" name="r2" id="r2s" value="أحياناً"><label for="r2s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="r3">
+      <div class="yn-question">هل تقدم المساعدة والصدقات للمحتاجين؟</div>
+      <div class="yn-options">
+        <input type="radio" name="r3" id="r3y" value="نعم"><label for="r3y">نعم</label>
+        <input type="radio" name="r3" id="r3n" value="لا"><label for="r3n">لا</label>
+        <input type="radio" name="r3" id="r3s" value="أحياناً"><label for="r3s">أحياناً</label>
+      </div>
+    </div>
+    <div class="yn-row" data-yn="r4">
+      <div class="yn-question">هل تسعى لزيادة تثقيفك الديني والوعي الروحاني؟</div>
+      <div class="yn-options">
+        <input type="radio" name="r4" id="r4y" value="نعم"><label for="r4y">نعم</label>
+        <input type="radio" name="r4" id="r4n" value="لا"><label for="r4n">لا</label>
+        <input type="radio" name="r4" id="r4s" value="أحياناً"><label for="r4s">أحياناً</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUBMIT -->
+<div class="submit-wrap" id="sec5">
+  <button type="button" class="submit-btn" onclick="submitForm()">إرسال الاستبيان ✦</button>
+  <p class="submit-note">إجاباتك سرية تماماً ولا تُشارك مع أي جهة خارجية</p>
+</div>
+
+</form>
+
+<!-- THANK YOU -->
+<div id="thank-you">
+  <div class="ty-icon">✦</div>
+  <h2>شكراً على صدقك وثقتك</h2>
+  <p>تم استلام إجاباتك. ستساعد هذه النتائج في رسم صورة واضحة عن مصادر الضغط في حياتك ووضع خطة عملية للتعامل معها.</p>
+  <div class="contact-badges">
+    <div class="contact-badge">📞 01125006701</div>
+    <div class="contact-badge">📞 01080050047</div>
+    <div class="contact-badge">🌐 umrezz.com</div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  © د. عمرو عز — كتاب إدارة الضغوط | www.umrezz.com
+</div>
+
+<script>
+// === البناء الديناميكي للـ 53 سؤال ===
+const questions53 = [
+  "أشعر بالراحة",
+  "أشعر بالغضب أو الحزن",
+  "أشعر أن هناك الكثير من المطالب المفروضة عليّ",
+  "أشعر أنني وحيد أو معزول",
+  "لدي العديد من المهام التي يجب إنجازها",
+  "أفعل دائماً الأشياء التي أحبها",
+  "أشعر بالتعب والإجهاد",
+  "أشعر بالهدوء",
+  "أشعر أنني مليء بالطاقة",
+  "أشعر أنني في مواقف نزاع",
+  "أخشى ألا أستطيع تحقيق أهدافي",
+  "لدي العديد من القرارات التي يجب اتخاذها",
+  "أشعر بالإحباط",
+  "أشعر أن مشاكلي تتفاقم",
+  "لدي الكثير من القلق",
+  "أشعر بالأمان والحماية",
+  "أشعر أنني في عجلة من أمري",
+  "أشعر بالتوتر والضغط بدون سبب واضح",
+  "أشعر بالانتقاد أو الحكم عليّ",
+  "أشعر بالإجهاد العقلي",
+  "لدي وقت كافٍ لنفسي",
+  "أشعر بالخوف من المستقبل",
+  "أستمتع بصحبة نفسي",
+  "أشعر بالضغط بسبب المواعيد النهائية",
+  "أشعر بأنني مُحمل بالمسؤوليات",
+  "يمكنني وصف نفسي بأنني خفيف الظل",
+  "لا أنام بشكل كافٍ",
+  "أجد صعوبة في التعايش مع الآخرين",
+  "أجد صعوبة في التركيز",
+  "لا أستطيع الاستمتاع بالحياة",
+  "من الصعب اتخاذ قرارات صغيرة (ماذا سأتناول؟)",
+  "أعاني من أعراض جسدية (تسارع القلب، صداع، آلام عضلات)",
+  "واجهت تغييرات كبيرة في حياتي مؤخراً",
+  "لا أجد ساعات كافية في اليوم لإنجاز كل شيء",
+  "أنكر أو أتجاهل المشكلات على أمل أن تختفي",
+  "أقوم بالمهام بنفسي لضمان إنجازها بشكل صحيح",
+  "أشعر أن ثقتي بنفسي أو تقديري لذاتي أقل مما أرغب",
+  "أشعر بالذنب كثيراً إذا استرخيت ولم أفعل شيئاً",
+  "أجد نفسي أفكر في المشكلات حتى عندما يُفترض أن أسترخي",
+  "أشعر بالتعب أو الإرهاق حتى بعد نوم كافٍ",
+  "أومئ برأسي أو أكمل جمل الآخرين عندما يتحدثون ببطء",
+  "لدي ميل إلى الأكل أو التحدث أو المشي أو القيادة بسرعة",
+  "تغيرت شهيتي (إفراط في الأكل أو فقدان الشهية)",
+  "أشعر بالانزعاج إذا كانت السيارة أمامي تسير ببطء",
+  "أشعر بالإحباط الشديد عند الانتظار في طابور",
+  "إذا أزعجني شيء أو شخص ما حقاً، أكتم مشاعري",
+  "عندما ألعب الرياضة أو الألعاب، أسعى جاهداً للفوز بأي ثمن",
+  "أعاني من تقلبات المزاج وصعوبة في التركيز والذاكرة",
+  "أجد نفسي أبحث عن الأخطاء وأنتقد الآخرين بدلاً من الثناء",
+  "أجد نفسي أطحن أسناني",
+  "لدي زيادة في آلام العضلات (الرقبة، الرأس، أسفل الظهر)",
+  "لا أستطيع أداء المهام كما اعتدت — حكمي مشوش أو ليس جيداً",
+  "لا أجد الوقت للاهتمامات أو الهوايات خارج العمل"
+];
+
+const labels = ['بالكاد','بعض الوقت','عادةً','دائماً'];
+const tbody = document.getElementById('q53body');
+questions53.forEach((q, i) => {
+  const tr = document.createElement('tr');
+  tr.id = 'qr' + (i+1);
+  let cells = `<td><div class="q-text"><span class="q-num">${i+1}</span><span>${q}</span></div></td>`;
+  labels.forEach((l, j) => {
+    const id = `q${i+1}_${j}`;
+    cells += `<td class="radio-cell"><input type="radio" name="q${i+1}" id="${id}" value="${l}"><label for="${id}" title="${l}"></label></td>`;
+  });
+  tr.innerHTML = cells;
+  tbody.appendChild(tr);
+});
+
+// === Progress ===
+function updateProgress() {
+  const total = 53 + 8 + 4; // radio groups that matter for progress
+  let answered = 0;
+  for (let i = 1; i <= 53; i++) {
+    if (document.querySelector(`input[name="q${i}"]:checked`)) answered++;
+  }
+  ['p1','p2','p3','p4','p5','p6','p7','p8','r1','r2','r3','r4'].forEach(n => {
+    if (document.querySelector(`input[name="${n}"]:checked`)) answered++;
+  });
+  const pct = Math.round((answered / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+
+  // highlight answered rows
+  for (let i = 1; i <= 53; i++) {
+    const row = document.getElementById('qr' + i);
+    if (row) row.classList.toggle('answered', !!document.querySelector(`input[name="q${i}"]:checked`));
+  }
+  // highlight yn rows
+  document.querySelectorAll('.yn-row[data-yn]').forEach(row => {
+    const name = row.getAttribute('data-yn');
+    row.classList.toggle('answered', !!document.querySelector(`input[name="${name}"]:checked`));
+  });
+}
+
+document.addEventListener('change', updateProgress);
+
+// === Scroll reveal ===
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.05 });
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// === Submit ===
+function submitForm() {
+  document.getElementById('surveyForm').style.display = 'none';
+  document.getElementById('thank-you').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
