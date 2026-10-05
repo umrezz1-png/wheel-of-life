@@ -1,6 +1,12 @@
 /*
  * Wheel of Life v2 — 8-axis wheel as inline SVG (no libraries).
- * LW2.wheel.render(container, results, { format, onSelect }) -> { select(key) }
+ *
+ * The SVG is a visual aid: it is hidden from assistive tech and its small
+ * touch areas are NOT the reliable way to pick a dimension. The app provides
+ * real HTML buttons (>= 44x44 CSS px) for that and calls mark() to sync the
+ * drawing. Tapping the drawing still works as a convenience.
+ *
+ * LW2.wheel.render(container, results, { dimensions, onSelect }) -> { mark(key), clear() }
  */
 (function () {
   'use strict';
@@ -25,18 +31,16 @@
 
   function render(container, results, opts) {
     opts = opts || {};
-    var fmt = opts.format || function (x) { return String(x); };
     var dimsByKey = opts.dimensions || {};
     var n = results.length;
 
     container.textContent = '';
     var svg = el('svg', {
       'class': 'lw2-wheel__svg', viewBox: '0 0 ' + SIZE + ' ' + SIZE,
-      role: 'group', 'aria-label': 'عجلة الحياة بثمانية محاور. التفاصيل مكتوبة في القائمة أسفلها.',
+      role: 'img', 'aria-label': 'عجلة الحياة بثمانية محاور. الدرجات مكتوبة في الأزرار والبطاقات أسفلها.',
       focusable: 'false'
     }, container);
 
-    // Grid rings (octagons) + labels of the scale on one spoke.
     RINGS.forEach(function (r) {
       var pts = [];
       for (var i = 0; i < n; i++) { var p = pt(i, n, (R * r) / 100); pts.push(f(p.x) + ',' + f(p.y)); }
@@ -47,7 +51,6 @@
       el('line', { 'class': 'lw2-wheel__spoke', x1: C, y1: C, x2: f(e.x), y2: f(e.y) }, svg);
     }
 
-    // Filled shape.
     var shapeG = el('g', { 'class': 'lw2-wheel__shape' }, svg);
     var shapePts = results.map(function (r, idx) {
       var p = pt(idx, n, (R * r.score) / 100);
@@ -55,62 +58,39 @@
     });
     el('polygon', { 'class': 'lw2-wheel__area', points: shapePts.join(' ') }, shapeG);
 
-    // Centre read-out.
-    var centre = el('g', { 'class': 'lw2-wheel__centre', 'aria-hidden': 'true' }, svg);
-    el('circle', { 'class': 'lw2-wheel__centre-bg', cx: C, cy: C, r: 44 }, centre);
-    var cName = el('text', { 'class': 'lw2-wheel__centre-name', x: C, y: C - 6, 'text-anchor': 'middle' }, centre);
-    var cScore = el('text', { 'class': 'lw2-wheel__centre-score', x: C, y: C + 24, 'text-anchor': 'middle' }, centre);
-
     var nodes = {};
-    var current = null;
 
-    function select(key) {
-      current = key;
-      results.forEach(function (r) {
-        var g = nodes[r.key];
-        g.classList.toggle('is-selected', r.key === key);
-        g.setAttribute('aria-pressed', r.key === key ? 'true' : 'false');
-      });
-      var r = results.filter(function (x) { return x.key === key; })[0];
-      if (r) {
-        centre.classList.add('is-visible');
-        cName.textContent = (dimsByKey[key] && dimsByKey[key].short) || key;
-        cScore.textContent = fmt(r.rounded);
-      }
-      if (opts.onSelect) opts.onSelect(key);
-    }
-
-    // Points + labels (each an accessible button).
     results.forEach(function (r, idx) {
       var dim = dimsByKey[r.key] || { label: r.key, short: r.key };
       var p = pt(idx, n, (R * r.score) / 100);
       var l = pt(idx, n, LABEL_R);
-      var g = el('g', {
-        'class': 'lw2-wheel__node', role: 'button', tabindex: '0', 'aria-pressed': 'false',
-        'aria-label': dim.label + '، ' + fmt(r.rounded) + ' من ' + fmt(100)
-      }, svg);
+      var g = el('g', { 'class': 'lw2-wheel__node', 'data-key': r.key }, svg);
       el('circle', { 'class': 'lw2-wheel__hit', cx: f(p.x), cy: f(p.y), r: 24 }, g);
       el('circle', { 'class': 'lw2-wheel__dot', cx: f(p.x), cy: f(p.y), r: 7 }, g);
 
       var anchor = Math.abs(l.cos) < 0.25 ? 'middle' : (l.cos > 0 ? 'start' : 'end');
-      var ly = l.y + (l.sin > 0.25 ? 14 : (l.sin < -0.25 ? -6 : 5));
+      var ly = l.y + (l.sin > 0.25 ? 18 : (l.sin < -0.25 ? -28 : -6));
+      // Wide invisible touch area, drawn BEHIND the text so the text stays the visible target.
+      var w = 96, h = 66;
+      var rx = anchor === 'middle' ? l.x - w / 2 : (anchor === 'start' ? l.x - 4 : l.x - w + 4);
+      el('rect', { 'class': 'lw2-wheel__hit', x: f(rx), y: f(ly - 26), width: w, height: h, rx: 10 }, g);
       var t = el('text', { 'class': 'lw2-wheel__label', x: f(l.x), y: f(ly), 'text-anchor': anchor }, g);
       t.textContent = dim.short;
-      var s = el('text', { 'class': 'lw2-wheel__value', x: f(l.x), y: f(ly + 18), 'text-anchor': anchor }, g);
-      s.textContent = fmt(r.rounded);
-      // Wide invisible target around the label for touch.
-      var w = 84, h = 52;
-      var rx = anchor === 'middle' ? l.x - w / 2 : (anchor === 'start' ? l.x - 4 : l.x - w + 4);
-      el('rect', { 'class': 'lw2-wheel__hit', x: f(rx), y: f(ly - 22), width: w, height: h, rx: 10 }, g);
+      var s = el('text', { 'class': 'lw2-wheel__value', x: f(l.x), y: f(ly + 28), 'text-anchor': anchor }, g);
+      s.textContent = (opts.format || String)(r.rounded);
 
-      g.addEventListener('click', function () { select(r.key); });
-      g.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(r.key); }
-      });
+      g.addEventListener('click', function () { if (opts.onSelect) opts.onSelect(r.key); });
       nodes[r.key] = g;
     });
 
-    return { select: select, current: function () { return current; } };
+    return {
+      mark: function (key) {
+        Object.keys(nodes).forEach(function (k) { nodes[k].classList.toggle('is-selected', k === key); });
+      },
+      clear: function () {
+        Object.keys(nodes).forEach(function (k) { nodes[k].classList.remove('is-selected'); });
+      }
+    };
   }
 
   window.LW2 = window.LW2 || {};

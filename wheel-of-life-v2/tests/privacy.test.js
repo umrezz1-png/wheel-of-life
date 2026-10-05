@@ -64,3 +64,17 @@ test('CTA URL is configurable and not hard-coded', () => {
   assert.match(cfg, /courseUrl:\s*""/);
   shipped.filter((f) => !f.endsWith('config.js')).forEach((f) => assert.ok(!/umrezz/i.test(read(f)), f + ' hard-codes a site name/URL'));
 });
+
+test('CSS: no !important; JS: scrollIntoView only behind the explicit "read interpretation" action', () => {
+  shipped.filter((f) => f.endsWith('.css')).forEach((f) => assert.ok(!/!important/.test(read(f)), f));
+  const app = read(path.join(ROOT, 'js', 'app.js'));
+  assert.equal((app.match(/scrollIntoView/g) || []).length, 1);
+  assert.match(app, /function goToCard\(\)[\s\S]{0,400}scrollIntoView/);
+  assert.ok(!/scrollIntoView/.test(read(path.join(ROOT, 'js', 'wheel.js'))));
+});
+
+test('developer notes are gated behind preview mode', () => {
+  const app = read(path.join(ROOT, 'js', 'app.js'));
+  assert.match(app, /else if \(isPreview\(\)\)/);
+  assert.match(read(path.join(ROOT, 'config', 'config.js')), /previewMode:\s*false/);
+});

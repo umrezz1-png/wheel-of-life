@@ -35,12 +35,25 @@ Per dimension: `raw = Σ 3 answers (3..15)`, `score = ((raw − 3) / 12) × 100`
 shown rounded. **No overall score exists anywhere.** Bands (UX wording only,
 not clinical cut-offs): 80–100 strong · 60–79 good · 40–59 needs attention · 0–39 priority for review.
 Bands use the unrounded score. Ties are broken by the original dimension order;
-the "strongest 3" and "need attention 3" lists never overlap.
+the "strongest 3" and "need attention 3" lists never overlap. If all eight scores are
+exactly equal, the lists are replaced by a single "start with the aspect you choose" notice;
+near-equal scores and ties across a list boundary get an explanatory note.
+
+## Results screen
+
+The wheel is a visual aid (hidden from assistive tech). Dimensions are chosen with eight real
+HTML buttons (>= 44x44 CSS px) below it; the read-out under them is a polite live region and
+selecting never scrolls the page. The "read this aspect's interpretation" button is the only
+thing that moves to a card. Answers can be reviewed ("راجع إجاباتي") with answers and per-aspect
+plans kept in memory only; "restart" asks for confirmation when a plan has been written.
 
 ## Configure the course button
 
 Set `courseUrl` in `config/config.js` (absolute `http(s)://…` or a path starting with `/`).
-Empty/invalid → the button renders disabled with a developer note. Nothing is guessed.
+Nothing is guessed. While it is empty or invalid, visitors see the course card **without** a
+button and without any developer text. To see the disabled placeholder button and the
+developer note while building, enable preview mode: `previewMode: true` in the config, or open
+the page with the hash `#lw2-preview` (e.g. `index.html#lw2-preview`).
 
 ## Tests
 

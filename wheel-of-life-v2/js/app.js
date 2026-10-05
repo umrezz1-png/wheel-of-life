@@ -33,6 +33,18 @@
     (children || []).forEach(function (c) { if (c) n.appendChild(c); });
     return n;
   }
+  function txt(s) { return document.createTextNode(s); }
+
+  // "٨٣ / ١٠٠" kept in left-to-right order inside right-to-left text.
+  // Arabic-Indic digits are "AN" in the bidi algorithm: AN + neutral + AN is
+  // reordered like RTL text even under dir=ltr (it would render "١٠٠ / ٨٣").
+  // Each number is therefore its own inline-block (an atomic box), inside an
+  // isolated LTR <bdi>, so the order is always 83 on the left, 100 on the right.
+  function scoreNode(n, cls) {
+    return h('bdi', { dir: 'ltr', 'class': 'lw2-score' + (cls ? ' ' + cls : '') }, [
+      h('span', { 'class': 'lw2-n', text: num(n) }), txt(' / '), h('span', { 'class': 'lw2-n', text: num(100) })
+    ]);
+  }
 
   function chevron(pointsLeft) {
     var NS = 'http://www.w3.org/2000/svg';
@@ -55,12 +67,18 @@
     return /^https?:\/\/[^\s]+$/i.test(u) || /^\/(?!\/)[^\s]*$/.test(u) ? u : '';
   }
 
+  // Developer notes are shown only in an explicit preview mode.
+  function isPreview() {
+    return !!(window.LW2_CONFIG && window.LW2_CONFIG.previewMode) || /(^|[#&])lw2-preview(&|$)/.test(window.location.hash || '');
+  }
+
   function mount(root) {
     root.classList.add('lw2-root');
     root.setAttribute('dir', 'rtl');
     root.setAttribute('lang', 'ar');
 
-    var state = { step: -1, answers: {}, actionDim: null, action: { change: '', first: '', when: '' } };
+    // Everything lives in memory only. plans: one independent plan per dimension.
+    var state = { step: -1, answers: {}, plans: {}, actionDim: null, reviewing: false };
     var shouldFocus = false;
     var keyHandler = null;
 
@@ -82,6 +100,20 @@
 
     function answeredCount() {
       return D.questions.filter(function (q) { return state.answers[q.id]; }).length;
+    }
+
+    function planOf(key) {
+      return state.plans[key] || (state.plans[key] = { change: '', first: '', when: '' });
+    }
+    function hasPlan() {
+      return Object.keys(state.plans).some(function (k) {
+        var p = state.plans[k];
+        return Object.keys(p).some(function (f) { return String(p[f]).trim() !== ''; });
+      });
+    }
+    function resetAll() {
+      state.answers = {}; state.plans = {}; state.actionDim = null; state.reviewing = false;
+      go(-1, true);
     }
 
     function render() {
@@ -188,6 +220,12 @@
         onclick: function () { go(state.step - 1, true); } }, [chevron(false), h('span', { text: 'السابق' })]);
       hint = h('p', { 'class': 'lw2-hint', text: 'اختر إجابة للمتابعة. يمكنك أيضًا الضغط على أحد الأرقام من ' + num(1) + ' إلى ' + num(5) + '.' });
 
+      // While reviewing, once every answer exists, jump straight back to the (updated) results.
+      var updated = (state.reviewing && answeredCount() === TOTAL)
+        ? h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost lw2-btn--block lw2-review-link',
+            onclick: function () { go(TOTAL, true); } }, [h('span', { text: T.updatedResults })])
+        : null;
+
       var screen = h('section', { 'class': 'lw2-screen lw2-question', 'aria-label': 'السؤال ' + num(q.id) + ' من ' + num(TOTAL) }, [
         h('div', { 'class': 'lw2-progress' }, [
           h('div', { 'class': 'lw2-progress__meta' }, [
@@ -199,7 +237,8 @@
         h('form', { 'class': 'lw2-q', onsubmit: function (e) { e.preventDefault(); },
           onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); if (state.answers[q.id]) go(state.step + 1, true); } } }, [fieldset]),
         h('div', { 'class': 'lw2-nav' }, [prevBtn, nextBtn]),
-        hint
+        hint,
+        updated
       ]);
 
       // 1-5 (Latin or Arabic-Indic) pick an answer. Bound to the document so it
@@ -223,60 +262,119 @@
     }
 
     /* ---------- Results ---------- */
-    function interpretation(r) {
+    function interpretationNode(r) {
       var d = dimsByKey[r.key];
-      return d.label + ' حصل على ' + num(r.rounded) + '/' + num(100) + ' في تقييمك الحالي، ' + r.band.sentence;
+      return h('p', { 'class': 'lw2-dim__text' }, [
+        txt(d.label + ' حصل على '), scoreNode(r.rounded), txt(' في تقييمك الحالي، ' + r.band.sentence)
+      ]);
     }
 
     function renderResults() {
       var firstMissing = D.questions.filter(function (q) { return !state.answers[q.id]; })[0];
       if (firstMissing) { state.step = firstMissing.id - 1; return renderQuestion(); }
+      state.reviewing = false;
 
       var results = S.computeScores(D, state.answers);
       var ranked = S.rank(results);
-      var cards = {};
+      var byKey = {};
+      results.forEach(function (r) { byKey[r.key] = r; });
+      var cards = {}, pickBtns = {}, wheelApi;
 
+      /* Wheel + independent selector buttons + readout */
       var wheelBox = h('div', { 'class': 'lw2-wheel' });
-      var wheelApi;
 
+      var pick = h('div', { 'class': 'lw2-pick', role: 'group', 'aria-label': T.pickLabel }, results.map(function (r) {
+        var b = h('button', { type: 'button', 'class': 'lw2-pick__btn', 'aria-pressed': 'false', 'data-key': r.key,
+          onclick: function () { selectDim(r.key); } }, [
+          h('span', { 'class': 'lw2-pick__name', text: dimsByKey[r.key].short }),
+          scoreNode(r.rounded)
+        ]);
+        pickBtns[r.key] = b;
+        return b;
+      }));
+
+      var readoutText = h('p', { 'class': 'lw2-readout__text', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', text: T.pickHint });
+      var readBtn = h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost lw2-readout__btn', hidden: true,
+        onclick: function () { goToCard(); } }, [h('span', { text: T.readDimension })]);
+      var readout = h('div', { 'class': 'lw2-readout' }, [readoutText, readBtn]);
+      var selected = null;
+
+      function selectDim(key) {
+        selected = key;
+        wheelApi.mark(key);
+        Object.keys(pickBtns).forEach(function (k) {
+          var on = k === key;
+          pickBtns[k].setAttribute('aria-pressed', on ? 'true' : 'false');
+          pickBtns[k].classList.toggle('is-selected', on);
+          cards[k].classList.toggle('is-highlight', on);
+        });
+        readoutText.textContent = '';
+        readoutText.appendChild(h('strong', { text: dimsByKey[key].label }));
+        readoutText.appendChild(txt(' · '));
+        readoutText.appendChild(scoreNode(byKey[key].rounded));
+        readoutText.appendChild(txt(' · ' + byKey[key].band.label));
+        readBtn.hidden = false;
+      }
+
+      // Only the explicit button moves the page to the card.
+      function goToCard() {
+        if (!selected) return;
+        var card = cards[selected];
+        card.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
+        card.querySelector('.lw2-dim__name').focus({ preventScroll: true });
+      }
+
+      /* Strongest / attention lists, close-score and tie notes */
       function listCard(title, items, kind) {
         return h('section', { 'class': 'lw2-listcard lw2-listcard--' + kind }, [
           h('h3', { 'class': 'lw2-h3', text: title }),
           h('ol', { 'class': 'lw2-rank' }, items.map(function (r) {
             return h('li', { 'class': 'lw2-rank__item' }, [
               h('span', { 'class': 'lw2-rank__name', text: dimsByKey[r.key].label }),
-              h('span', { 'class': 'lw2-rank__score', text: num(r.rounded) + '/' + num(100) }),
+              scoreNode(r.rounded, 'lw2-rank__score'),
               h('span', { 'class': 'lw2-rank__band', text: r.band.label })
             ]);
           }))
         ]);
       }
 
-      var notes = [];
-      if (ranked.spread <= 10) notes.push(T.closeScoresNote);
-      else if (Math.min.apply(null, ranked.attention.map(function (r) { return r.score; })) >= 60) notes.push(T.relativeListNote);
+      var rankBlock = [];
+      if (ranked.spread === 0) {
+        rankBlock.push(h('div', { 'class': 'lw2-tienotice', role: 'note' }, [h('p', { text: T.allEqualNotice })]));
+      } else {
+        if (ranked.spread <= 10) rankBlock.push(h('p', { 'class': 'lw2-note lw2-note--before', text: T.closeScoresNote }));
+        rankBlock.push(h('div', { 'class': 'lw2-lists' }, [
+          listCard(T.strongestTitle, ranked.strongest, 'strong'),
+          listCard(T.attentionTitle, ranked.attention, 'attention')
+        ]));
+        if (ranked.strongestTie || ranked.attentionTie) rankBlock.push(h('p', { 'class': 'lw2-note', text: T.tieBoundaryNote }));
+        if (ranked.spread > 10 && Math.min.apply(null, ranked.attention.map(function (r) { return r.score; })) >= 60) {
+          rankBlock.push(h('p', { 'class': 'lw2-note', text: T.relativeListNote }));
+        }
+      }
 
+      /* Per-dimension cards */
       var dimList = h('ul', { 'class': 'lw2-dims' }, results.map(function (r) {
         var d = dimsByKey[r.key];
         var fill = h('span', { 'class': 'lw2-meter__fill lw2-band--' + r.band.key });
         fill.style.width = Math.round(r.score) + '%';
         var li = h('li', { 'class': 'lw2-dim', id: 'lw2-dim-' + r.key }, [
           h('div', { 'class': 'lw2-dim__head' }, [
-            h('h4', { 'class': 'lw2-dim__name', text: d.label }),
-            h('span', { 'class': 'lw2-dim__score', text: num(r.rounded) + '/' + num(100) })
+            h('h4', { 'class': 'lw2-dim__name', tabindex: '-1', text: d.label }),
+            scoreNode(r.rounded, 'lw2-dim__score')
           ]),
           h('div', { 'class': 'lw2-meter', role: 'img', 'aria-label': d.label + ': ' + num(r.rounded) + ' من ' + num(100) }, [fill]),
           h('p', { 'class': 'lw2-dim__band' }, [
             h('span', { 'class': 'lw2-bandtag lw2-band--' + r.band.key, text: r.band.label })
           ]),
           h('p', { 'class': 'lw2-dim__covers', text: d.covers }),
-          h('p', { 'class': 'lw2-dim__text', text: interpretation(r) })
+          interpretationNode(r)
         ]);
         cards[r.key] = li;
         return li;
       }));
 
-      /* Reflection */
+      /* Reflection + one plan per dimension (memory only) */
       var actionHost = h('div', { 'class': 'lw2-action-host', 'aria-live': 'polite' });
       var reflName = 'lw2-focus-dim';
       var choices = D.dimensions.map(function (d) {
@@ -293,43 +391,65 @@
       function paintAction(focus) {
         actionHost.textContent = '';
         if (!state.actionDim) return;
-        var d = dimsByKey[state.actionDim];
+        var key = state.actionDim, d = dimsByKey[key], plan = planOf(key);
         var heading = h('h3', { 'class': 'lw2-h3', tabindex: '-1', text: T.actionTitle + ': ' + d.label });
         var fields = T.actionFields.map(function (fdef) {
-          var id = 'lw2-act-' + fdef.key;
+          var id = 'lw2-act-' + key + '-' + fdef.key;
           var ta = h('textarea', { id: id, 'class': 'lw2-field__input', rows: '2', maxlength: '240', placeholder: fdef.placeholder, autocomplete: 'off',
-            oninput: function (e) { state.action[fdef.key] = e.target.value; } });
-          ta.value = state.action[fdef.key];
+            oninput: function (e) { plan[fdef.key] = e.target.value; } });
+          ta.value = plan[fdef.key];
           return h('div', { 'class': 'lw2-field' }, [h('label', { 'for': id, 'class': 'lw2-field__label', text: fdef.label }), ta]);
         });
-        actionHost.appendChild(h('div', { 'class': 'lw2-actioncard' }, [heading].concat(fields, [h('p', { 'class': 'lw2-privacy', text: T.actionPrivacy })])));
+        actionHost.appendChild(h('div', { 'class': 'lw2-actioncard', 'data-dim': key }, [heading].concat(fields, [h('p', { 'class': 'lw2-privacy', text: T.actionPrivacy })])));
         if (focus) heading.focus();
       }
 
-      /* CTA */
+      /* Course card: dev notes / placeholder button only in explicit preview mode */
       var url = validCourseUrl();
+      var ctaCard = [h('h3', { id: 'lw2-cta-title', 'class': 'lw2-h3', text: T.cta.title }), h('p', { text: T.cta.body })];
+      if (url) {
+        ctaCard.push(h('a', { 'class': 'lw2-btn lw2-btn--primary lw2-btn--block', href: url, target: '_blank', rel: 'noopener noreferrer' },
+          [h('span', { text: T.cta.button }), chevron(true)]));
+      } else if (isPreview()) {
+        ctaCard.push(h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--primary lw2-btn--block', disabled: true, 'aria-disabled': 'true' }, [h('span', { text: T.cta.button })]));
+        ctaCard.push(h('p', { 'class': 'lw2-devnote', text: T.cta.missingUrl }));
+      }
       var cta = h('section', { 'class': 'lw2-cta', 'aria-labelledby': 'lw2-cta-title' }, [
         h('blockquote', { 'class': 'lw2-quote' }, [h('p', { text: T.balanceQuote })]),
-        h('div', { 'class': 'lw2-cta__card' }, [
-          h('h3', { id: 'lw2-cta-title', 'class': 'lw2-h3', text: T.cta.title }),
-          h('p', { text: T.cta.body }),
-          url
-            ? h('a', { 'class': 'lw2-btn lw2-btn--primary lw2-btn--block', href: url, target: '_blank', rel: 'noopener noreferrer' }, [h('span', { text: T.cta.button }), chevron(true)])
-            : h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--primary lw2-btn--block', disabled: true, 'aria-disabled': 'true' }, [h('span', { text: T.cta.button })]),
-          url ? null : h('p', { 'class': 'lw2-devnote', text: T.cta.missingUrl })
-        ])
+        h('div', { 'class': 'lw2-cta__card' }, ctaCard)
       ]);
+
+      /* Review answers / restart (restart asks first when a plan was written) */
+      var confirmHost = h('div', { 'class': 'lw2-confirmhost' });
+      var retakeBtn = h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost', onclick: function () {
+        if (!hasPlan()) { resetAll(); return; }
+        showConfirm();
+      } }, [h('span', { text: T.retake })]);
+      var reviewBtn = h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost', onclick: function () {
+        state.reviewing = true; go(0, true);
+      } }, [h('span', { text: T.reviewAnswers })]);
+
+      function hideConfirm() { confirmHost.textContent = ''; retakeBtn.focus(); }
+      function showConfirm() {
+        confirmHost.textContent = '';
+        var cancel = h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost', onclick: hideConfirm }, [h('span', { text: T.confirmNo })]);
+        var yes = h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--primary', onclick: resetAll }, [h('span', { text: T.confirmYes })]);
+        confirmHost.appendChild(h('div', { 'class': 'lw2-confirm', role: 'alertdialog', 'aria-labelledby': 'lw2-confirm-t',
+          onkeydown: function (e) { if (e.key === 'Escape') { e.preventDefault(); hideConfirm(); } } }, [
+          h('p', { id: 'lw2-confirm-t', text: T.confirmReset }),
+          h('div', { 'class': 'lw2-nav' }, [cancel, yes])
+        ]));
+        cancel.focus();
+      }
 
       var screen = h('section', { 'class': 'lw2-screen lw2-results', 'aria-labelledby': 'lw2-results-title' }, [
         h('h2', { id: 'lw2-results-title', 'class': 'lw2-title lw2-title--results', tabindex: '-1', 'data-lw2-focus': '', text: T.resultsTitle }),
         h('p', { 'class': 'lw2-lead', text: T.resultsLead }),
         wheelBox,
-        h('p', { 'class': 'lw2-hint lw2-hint--center', text: T.wheelHint }),
-        h('div', { 'class': 'lw2-lists' }, [
-          listCard(T.strongestTitle, ranked.strongest, 'strong'),
-          listCard(T.attentionTitle, ranked.attention, 'attention')
-        ]),
-        notes.length ? h('p', { 'class': 'lw2-note', text: notes[0] }) : null,
+        h('p', { 'class': 'lw2-note lw2-note--center', text: T.scaleNote }),
+        pick,
+        readout
+      ].concat(rankBlock, [
         h('h3', { 'class': 'lw2-h3 lw2-h3--section', text: T.interpretationTitle }),
         h('p', { 'class': 'lw2-note', text: T.interpretationNote }),
         dimList,
@@ -340,20 +460,11 @@
           actionHost
         ]),
         cta,
-        h('div', { 'class': 'lw2-nav lw2-nav--single' }, [
-          h('button', { type: 'button', 'class': 'lw2-btn lw2-btn--ghost', onclick: function () {
-            state.answers = {}; state.actionDim = null; state.action = { change: '', first: '', when: '' }; go(-1, true);
-          } }, [h('span', { text: 'إعادة الاختبار من البداية' })])
-        ])
-      ]);
+        h('div', { 'class': 'lw2-nav lw2-actions' }, [reviewBtn, retakeBtn]),
+        confirmHost
+      ]));
 
-      wheelApi = W.render(wheelBox, results, {
-        dimensions: dimsByKey, format: num,
-        onSelect: function (key) {
-          Object.keys(cards).forEach(function (k) { cards[k].classList.toggle('is-highlight', k === key); });
-          cards[key].scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
-        }
-      });
+      wheelApi = W.render(wheelBox, results, { dimensions: dimsByKey, format: num, onSelect: selectDim });
       paintAction(false);
       announce(T.resultsTitle);
       return screen;

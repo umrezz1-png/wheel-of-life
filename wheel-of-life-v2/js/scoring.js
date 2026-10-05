@@ -71,6 +71,7 @@
    * Strongest 3 and 3 needing most attention.
    * Ties are broken by the original dimension order (deterministic).
    * The two lists never overlap: attention is drawn from the rest.
+   * spread === 0 means all dimensions are exactly equal (UI shows no lists).
    */
   function rank(scores) {
     var byStrength = scores.slice().sort(function (a, b) {
@@ -86,7 +87,20 @@
 
     var all = scores.map(function (s) { return s.score; });
     var spread = Math.max.apply(null, all) - Math.min.apply(null, all);
-    return { strongest: strongest, attention: attention, spread: spread };
+
+    // A tie "crosses the edge" of a list when a dimension left out of that list
+    // has exactly the score of the list's boundary item: which of the equal
+    // dimensions made it in was then decided by display order only.
+    function crossesEdge(list, boundary) {
+      var inList = {};
+      list.forEach(function (s) { inList[s.key] = true; });
+      return scores.some(function (s) { return !inList[s.key] && s.score === boundary; });
+    }
+    var strongestTie = crossesEdge(strongest, strongest[strongest.length - 1].score);
+    var attentionTie = crossesEdge(attention, attention[attention.length - 1].score);
+
+    return { strongest: strongest, attention: attention, spread: spread,
+             strongestTie: strongestTie, attentionTie: attentionTie };
   }
 
   return { normalize: normalize, bandFor: bandFor, computeScores: computeScores, rank: rank };

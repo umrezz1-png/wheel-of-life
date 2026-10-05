@@ -82,7 +82,7 @@ test('no overall score is produced', () => {
   const res = S.computeScores(D, all(4));
   assert.ok(Array.isArray(res));
   const ranked = S.rank(res);
-  assert.deepEqual(Object.keys(ranked).sort(), ['attention', 'spread', 'strongest']);
+  assert.deepEqual(Object.keys(ranked).sort(), ['attention', 'attentionTie', 'spread', 'strongest', 'strongestTie']);
   assert.equal(S.overall, undefined);
   assert.ok(!JSON.stringify(res).match(/overall|total|average/i));
 });
@@ -113,4 +113,37 @@ test('incomplete or invalid answers are rejected', () => {
   assert.throws(() => S.computeScores(D, { ...all(3), 5: 6 }));
   assert.throws(() => S.computeScores(D, { ...all(3), 5: 0 }));
   assert.throws(() => S.computeScores(D, { ...all(3), 5: '3' }));
+});
+
+test('tie flags: exact equality and edge-crossing ties', () => {
+  // all equal -> spread exactly 0 (UI then shows no lists)
+  assert.equal(S.rank(S.computeScores(D, all(3))).spread, 0);
+  assert.equal(S.rank(S.computeScores(D, all(1))).spread, 0);
+  assert.equal(S.rank(S.computeScores(D, all(5))).spread, 0);
+  // near-equal but not identical: spread > 0 and <= 10
+  let r = S.rank(S.computeScores(D, byRaw([9, 9, 9, 9, 9, 9, 9, 10])));
+  assert.ok(r.spread > 0 && r.spread <= 10);
+  assert.equal(r.strongestTie, true);   // 9s tie across the top-3 edge
+  assert.equal(r.attentionTie, true);
+  // distinct scores -> no edge-crossing tie
+  r = S.rank(S.computeScores(D, byRaw([15, 3, 9, 12, 6, 13, 7, 10])));
+  assert.equal(r.strongestTie, false); assert.equal(r.attentionTie, false);
+  // tie fully inside the list (two equal, both selected, boundary item unique)
+  r = S.rank(S.computeScores(D, byRaw([15, 15, 14, 3, 4, 5, 6, 7])));
+  assert.equal(r.strongestTie, false);
+  assert.deepEqual(r.strongest.map((x) => x.key), ['spiritual', 'career', 'financial']);
+  // group of equal scores bigger than the list -> flagged, ordering still by display order
+  r = S.rank(S.computeScores(D, byRaw([12, 12, 12, 12, 6, 6, 6, 6])));
+  assert.equal(r.strongestTie, true); assert.equal(r.attentionTie, true);
+  assert.deepEqual(r.strongest.map((x) => x.key), ['spiritual', 'career', 'financial']);
+  assert.deepEqual(r.attention.map((x) => x.key), ['family', 'personal', 'health']);
+});
+
+test('ranking logic is unchanged by the tie flags (lists never overlap)', () => {
+  for (let t = 0; t < 300; t++) {
+    const raws = Array.from({ length: 8 }, () => 3 + Math.floor(Math.random() * 13));
+    const r = S.rank(S.computeScores(D, byRaw(raws)));
+    assert.equal(r.strongest.length, 3); assert.equal(r.attention.length, 3);
+    assert.equal(new Set([...r.strongest, ...r.attention].map((x) => x.key)).size, 6);
+  }
 });
